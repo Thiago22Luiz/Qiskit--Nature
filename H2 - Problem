@@ -1,0 +1,70 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from qiskit_nature.second_q.drivers import PySCFDriver
+from qiskit_nature.second_q.mappers import JordanWignerMapper
+from qiskit_nature.second_q.operators import FermionicOp
+from qiskit_algorithms import NumPyMinimumEigensolver
+from qiskit_nature.units import DistanceUnit
+
+# Distâncias em Angstroms
+distancias = np.linspace(0.4, 6, 100)
+energias = []
+
+for d in distancias:
+    driver = PySCFDriver(
+        atom=f"H 0 0 0; H 0 0 {d}",
+        unit=DistanceUnit.ANGSTROM,
+        basis="sto3g",
+
+    )
+
+    problem = driver.run()
+    problem.nuclear_repulsion_energy
+
+    energiaEL = problem.hamiltonian
+    integrais1 = energiaEL.electronic_integrals.alpha["+-"]
+    integrais2 = energiaEL.electronic_integrals.alpha["++--"]
+
+    #print(integrais1)
+
+
+    num_spin_orbitals = integrais1.shape[0]
+
+    h1_dict = {}
+    for p in range(num_spin_orbitals):
+        for q in range(num_spin_orbitals):
+            coef = integrais1[p, q]
+            h1_dict[f"+_{p} -_{q}"] = coef
+    h1 = FermionicOp(h1_dict, num_spin_orbitals=num_spin_orbitals)
+
+    h2_dict = {}
+    for p in range(num_spin_orbitals):
+        for q in range(num_spin_orbitals):
+            for r in range(num_spin_orbitals):
+                for s in range(num_spin_orbitals):
+                    coef = integrais2[p, q, r, s]
+                    h2_dict[f"+_{p} +_{q} -_{s} -_{r}"] = 0.5 * coef
+    h2 = FermionicOp(h2_dict, num_spin_orbitals=num_spin_orbitals)
+
+    Htotal = h1 + h2
+
+    mapper_jw = JordanWignerMapper()
+    qubit_op_jw = mapper_jw.map(Htotal)
+
+    solver = NumPyMinimumEigensolver()
+    result = solver.compute_minimum_eigenvalue(qubit_op_jw)
+
+    energia = result.eigenvalue.real + problem.nuclear_repulsion_energy
+
+    energias.append(energia)
+
+    #print(f"Distância: {d:.2f} Å -> Energia: {energia:.6f} Ha")
+
+# Plotar curva de energia
+plt.figure(figsize=(8, 6))
+plt.plot(distancias, energias)
+plt.title("Curva de Energia do H₂ (Base STO-3G)")
+plt.xlabel("Distância internuclear (Å)")
+plt.ylabel("Energia (Hartree)")
+plt.grid(True)
+plt.show()

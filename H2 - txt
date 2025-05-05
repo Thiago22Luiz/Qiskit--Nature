@@ -1,0 +1,28 @@
+from pyscf import gto, dft, scf, ao2mo
+import numpy as np
+
+
+mol = gto.M(
+    atom='H 0 0 0; H 0 0 0.74',  # Distância de 0.74 Å
+    basis='sto-3g',
+    unit='Angstrom',
+    verbose=0
+)
+
+
+mf = dft.RKS(mol)
+mf.xc = 'lda,vwn'  
+mf.kernel()
+
+
+n = mol.nao_nr()
+
+
+hcore = mf.get_hcore()
+np.savetxt("integral_1e.txt", hcore, fmt="%.10f")
+
+
+eri = ao2mo.kernel(mol, mf.mo_coeff)
+eri = ao2mo.restore(1, eri, n)  # Formato (pq|rs), simetrizado
+eri_flat = eri.reshape(n**2, n**2)
+np.savetxt("integral_2e.txt", eri_flat, fmt="%.10f")

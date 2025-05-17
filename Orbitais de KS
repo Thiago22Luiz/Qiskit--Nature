@@ -1,0 +1,20 @@
+from pyscf import gto, dft
+import numpy as np
+
+mol = gto.M(
+    atom='H 0 0 0; H 0 0 0.735',  # distância típica da ligação H-H
+    basis='sto-3g',
+    charge=0,
+    spin=0,
+    verbose=4
+)
+
+mf = dft.RKS(mol)
+mf.xc = 'b3lyp'
+mf.kernel()
+
+C = mf.mo_coeff  
+
+np.set_printoptions(precision=6, suppress=True)
+print("Matriz C (coeficientes dos orbitais KS):")
+print(C)

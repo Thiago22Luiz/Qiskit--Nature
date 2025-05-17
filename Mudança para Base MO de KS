@@ -1,0 +1,38 @@
+import numpy as np
+
+# 1. Carrega integrais AO
+h_ao = np.loadtxt("integral_1e.txt")  # 2x2
+eri_ao_flat = np.loadtxt("integral_2e.txt")
+eri_ao = eri_ao_flat.reshape(2, 2, 2, 2)  # 2x2x2x2
+
+# 2. Matriz C (fornecida pelos orbitais KS via PySCF)
+C = np.array([
+    [0.548302, 1.218327],
+    [0.548302, -1.218327]
+])
+
+# 3. Transformar h_ao → h_mo
+h_mo = C.T @ h_ao @ C
+
+print("Matriz h_ij na base dos orbitais de Kohn-Sham (MO):")
+print(np.round(h_mo, 6))
+
+g_mo = np.zeros((2, 2, 2, 2))
+
+# Faz a transformação completa
+for i in range(2):
+    for j in range(2):
+        for k in range(2):
+            for l in range(2):
+                for p in range(2):
+                    for q in range(2):
+                        for r in range(2):
+                            for s in range(2):
+                                g_mo[i, j, k, l] += (
+                                    C[p, i] * C[q, j] *
+                                    eri_ao[p, q, r, s] *
+                                    C[r, k] * C[s, l]
+                                )
+
+print("Tensor g_ijkl na base dos orbitais de Kohn-Sham (MO):")
+print(np.round(g_mo, 6))
